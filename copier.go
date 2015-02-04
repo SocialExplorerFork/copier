@@ -2,7 +2,19 @@ package copier
 
 import "reflect"
 
+const (
+	ValidFieldName = "Valid"
+)
+
+func CopyOnlyValid(copy_to interface{}, copy_from interface{}) (err error) {
+	return copy_internal(copy_to, copy_from, true)
+}
+
 func Copy(copy_to interface{}, copy_from interface{}) (err error) {
+	return copy_internal(copy_to, copy_from, false)
+}
+
+func copy_internal(copy_to interface{}, copy_from interface{}, only_valid bool) (err error) {
 	var (
 		is_slice        bool
 		from_typ        reflect.Type
@@ -67,7 +79,24 @@ func Copy(copy_to interface{}, copy_from interface{}) (err error) {
 		for i := 0; i < from_typ.NumField(); i++ {
 			field := from_typ.Field(i)
 			if !field.Anonymous {
+
 				name := field.Name
+				field_type := field.Type
+
+				if only_valid && field_type.Kind() == reflect.Struct {
+					_, found := field_type.FieldByName(ValidFieldName)
+
+					if found && source.IsValid() && source.FieldByName(name).IsValid() {
+						valid_field_v := source.FieldByName(name).FieldByName(ValidFieldName)
+						if valid_field_v.Kind() == reflect.Bool {
+							isValid := valid_field_v.Bool()
+							if !isValid {
+								continue
+							}
+						}
+					}
+				}
+
 				from_field := source.FieldByName(name)
 				to_field := dest.FieldByName(name)
 				to_method := dest.Addr().MethodByName(name)
@@ -85,6 +114,22 @@ func Copy(copy_to interface{}, copy_from interface{}) (err error) {
 			field := to_typ.Field(i)
 			if !field.Anonymous {
 				name := field.Name
+				field_type := field.Type
+
+				if only_valid && field_type.Kind() == reflect.Struct {
+					_, found := field_type.FieldByName(ValidFieldName)
+					if found && source.IsValid() && source.FieldByName(name).IsValid() {
+						valid_field_v := source.FieldByName(name).FieldByName(ValidFieldName)
+						if valid_field_v.Kind() == reflect.Bool {
+
+							isValid := valid_field_v.Bool()
+							if !isValid {
+								continue
+							}
+						}
+					}
+				}
+
 				from_method := source.Addr().MethodByName(name)
 				to_field := dest.FieldByName(name)
 
