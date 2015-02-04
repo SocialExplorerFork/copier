@@ -32,6 +32,46 @@ func (employee *Employee) Role(role string) {
 	employee.SuperRule = "Super " + role
 }
 
+type NestedStruct struct {
+	Value string
+	Valid bool
+}
+
+type MainStruct struct {
+	Nested NestedStruct
+	Name   string
+}
+
+func TestCopyOnlyValid(t *testing.T) {
+
+	validNested := NestedStruct{Valid: true, Value: "Some value 1"}
+	nonValidNested := NestedStruct{Valid: false, Value: "Some value 2"}
+
+	main1 := MainStruct{Name: "Main 1", Nested: validNested}
+	main2 := MainStruct{Name: "Main 2", Nested: nonValidNested}
+
+	dest1 := MainStruct{}
+	dest2 := MainStruct{}
+
+	CopyOnlyValid(&dest1, &main1)
+
+	if dest1.Nested.Value != "Some value 1" {
+		t.Errorf("A struct with 'Valid' field set to true is not copied correctly")
+	}
+
+	if dest1.Nested.Valid != true {
+		t.Errorf("A struct with 'Valid' field set to true is not correctly copied (Valid is now false)")
+	}
+
+	CopyOnlyValid(&dest2, &main2)
+	if dest2.Nested.Value == "Some value 2" {
+		t.Errorf("A struct with 'Valid' field set to false is copied, but that should not happen")
+	}
+
+	if dest2.Nested.Valid != false {
+		t.Errorf("A struct with 'Valid' field set to true is not correctly copied ('Valid' is now true)")
+	}
+}
 func TestCopyStruct(t *testing.T) {
 	user := User{Name: "Jinzhu", Age: 18, Role: "Admin", Notes: []string{"hello world"}}
 	employee := Employee{}
